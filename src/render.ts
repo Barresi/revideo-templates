@@ -1,15 +1,15 @@
-import { renderVideo } from '@revideo/renderer';
+import { renderVideo } from '@revideo/renderer'
 
 async function render() {
-  console.log('Rendering video...');
+  console.log('Rendering video...')
 
   // This is the main function that renders the video
   const file = await renderVideo({
-    projectFile: './src/TopBottomTemplate.tsx',
-    settings: {logProgress: true},
-  });
+    projectFile: './templates/TopBottomTemplate.ts',
+    settings: { logProgress: true }
+  })
 
-  console.log(`Rendered video to ${file}`);
+  console.log(`Rendered video to ${file}`)
 }
 
-render();
+render()
