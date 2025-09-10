@@ -6,7 +6,7 @@ import * as path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { extractAudioFromVideo, validateVideoFile } from './utils/audioExtractor'
 
-import { scheduleCleanup } from './utils/cleanupService'
+import { forceCleanup, scheduleCleanup } from './utils/cleanupService'
 import { downloadFiles } from './utils/fileDownloader'
 import { createJobDirectory, getJobDirectory } from './utils/jobDirectoryService'
 import { ITopBottomTemplateVariables, RenderRequest } from './utils/types'
@@ -76,7 +76,7 @@ app.post('/render/top-bottom-template', async (req, res) => {
       words: words
     }
 
-    const outputFilePath = path.join(dir.output, `${jobId}.mp4`)
+    const outputFilePath = path.join(dir.output, `result.mp4`)
     await renderVideo({
       projectFile: './src/templates/TopBottomTemplate.ts',
       variables: renderVariables,
@@ -112,7 +112,7 @@ app.post('/render/top-bottom-template', async (req, res) => {
 
     // Force immediate cleanup on error
     if (jobDir) {
-      //forceCleanup(jobId)
+      forceCleanup(jobId)
     }
 
     res.status(500).json({
