@@ -70,26 +70,42 @@ export async function downloadFile(url: string, destinationPath: string): Promis
 }
 
 export async function downloadFiles(urls: string[], destinationDir: string): Promise<DownloadResult[]> {
-  const downloadPromises = urls.map((url, index) => {
-    const extension = getFileExtension(url)
-    const filename = `file_${index}${extension}`
-    const destinationPath = path.join(destinationDir, filename)
+  const results: DownloadResult[] = []
+  
+  for (let index = 0; index < urls.length; index++) {
+    const url = urls[index]
+    let extension = getFileExtension(url)
+    let filename = `file_${index}${extension}`
+    let destinationPath = path.join(destinationDir, filename)
     
-    return downloadFile(url, destinationPath)
-  })
-
-  try {
-    return await Promise.all(downloadPromises)
-  } catch (error) {
-    // Cleanup any successfully downloaded files on error
-    const existingFiles = fs.readdirSync(destinationDir).map(file => path.join(destinationDir, file))
-    existingFiles.forEach(file => {
-      if (fs.existsSync(file)) {
-        fs.unlinkSync(file)
+    try {
+      const result = await downloadFile(url, destinationPath)
+      
+      // If we got a MIME type, try to determine correct extension
+      if (result.mimeType && extension === '.mp4') {
+        const correctExtension = getExtensionFromMimeType(result.mimeType)
+        if (correctExtension !== extension) {
+          // Rename file with correct extension
+          const newFilename = `file_${index}${correctExtension}`
+          const newPath = path.join(destinationDir, newFilename)
+          fs.renameSync(destinationPath, newPath)
+          result.filePath = newPath
+        }
       }
-    })
-    throw error
+      
+      results.push(result)
+    } catch (error) {
+      // Cleanup any successfully downloaded files on error
+      results.forEach(result => {
+        if (fs.existsSync(result.filePath)) {
+          fs.unlinkSync(result.filePath)
+        }
+      })
+      throw error
+    }
   }
+  
+  return results
 }
 
 function isValidGoogleDriveUrl(url: string): boolean {
@@ -124,16 +140,38 @@ function getFileExtension(url: string): string {
     const lastDot = pathname.lastIndexOf('.')
     
     if (lastDot !== -1) {
-      return pathname.substring(lastDot)
+      const ext = pathname.substring(lastDot)
+      // Return extension if it looks like a valid file extension
+      if (ext.length <= 5 && ext.match(/^\.[a-zA-Z0-9]+$/)) {
+        return ext
+      }
     }
     
-    // Default extensions for common Google Drive scenarios
-    if (url.includes('export=download')) {
-      return '.mp4' // assume video for UGC content
+    // For Google Drive URLs, try to determine type from content-type later
+    // For now, assume common formats
+    if (url.includes('export=download') || url.includes('drive.usercontent.google.com')) {
+      return '.mp4' // Default for video files
     }
     
-    return '.file'
+    return '.mp4' // Default assumption for video content
   } catch {
-    return '.file'
+    return '.mp4'
   }
+}
+
+function getExtensionFromMimeType(mimeType: string): string {
+  const mimeToExt: Record<string, string> = {
+    'video/mp4': '.mp4',
+    'video/webm': '.webm',
+    'video/ogg': '.ogv',
+    'video/avi': '.avi',
+    'video/mov': '.mov',
+    'video/quicktime': '.mov',
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/webp': '.webp'
+  }
+  
+  return mimeToExt[mimeType.toLowerCase()] || '.mp4'
 }
