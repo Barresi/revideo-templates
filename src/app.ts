@@ -81,7 +81,7 @@ app.post('/render/top-bottom-template', async (req, res) => {
       projectFile: './src/templates/TopBottomTemplate.ts',
       variables: renderVariables,
       settings: {
-        outFile: `./${jobId}.mp4` as `${string}.mp4`,
+        outFile: `../public/${jobId}/output/result.mp4` as `${string}.mp4`,
         logProgress: true,
         puppeteer: {
           executablePath: '/usr/bin/google-chrome-stable',
