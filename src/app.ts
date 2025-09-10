@@ -72,8 +72,8 @@ app.post('/render/top-bottom-template', async (req, res) => {
     // Step 5: Render final video
     console.log(`[${jobId}] Rendering final video...`)
     const renderVariables: ITopBottomTemplateVariables = {
-      ugcVideoUrl: `/videos/${path.basename(ugcVideoResult.filePath)}`,
-      imageUrls: imageResults.map((result) => `/images/${path.basename(result.filePath)}`),
+      ugcVideoUrl: `/${jobId}/videos/${path.basename(ugcVideoResult.filePath)}`,
+      imageUrls: imageResults.map((result) => `/${jobId}/images/${path.basename(result.filePath)}`),
       words: words
     }
 
