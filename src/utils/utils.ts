@@ -10,18 +10,22 @@ const deepgram = createClient(process.env.DEEPGRAM_API_KEY || '')
 
 export async function getWordTimestamps(audioFilePath: string): Promise<Word[]> {
   console.log(`[getWordTimestamps] Starting transcription for file: ${audioFilePath}`)
-  
+
   try {
     const audioBuffer = fs.readFileSync(audioFilePath)
     console.log(`[getWordTimestamps] Audio file size: ${audioBuffer.length} bytes`)
 
     const { result } = (await deepgram.listen.prerecorded.transcribeFile(audioBuffer, {
       model: 'nova-2',
-      smart_format: true
+      smart_format: true,
+      punctuate: true,
+      diarize: false,
+      language: 'ru',
+      mimetype: 'audio/wav'
     })) as { result: DeepgramResponse }
 
     console.log(`[getWordTimestamps] Full Deepgram result:`, JSON.stringify(result, null, 2))
-    
+
     if (!result) {
       throw new Error('Deepgram returned null result')
     }
