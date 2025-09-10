@@ -1,29 +1,36 @@
 import { createClient } from '@deepgram/sdk'
 import axios from 'axios'
 import * as fs from 'fs'
+import { config } from 'dotenv'
+import { DeepgramResponse, ElevenLabsVoice, ElevenLabsVoicesResponse, Word } from './types'
 
-const deepgram = createClient(process.env['DEEPGRAM_API_KEY'] || '')
+config()
 
-export async function getWordTimestamps(audioFilePath: string) {
-  const { result } = await deepgram.listen.prerecorded.transcribeFile(fs.readFileSync(audioFilePath), {
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY || '')
+
+export async function getWordTimestamps(audioFilePath: string): Promise<Word[]> {
+  const { result } = (await deepgram.listen.prerecorded.transcribeFile(fs.readFileSync(audioFilePath), {
     model: 'nova-2',
     smart_format: true
-  })
+  })) as { result: DeepgramResponse }
 
   if (result) {
     return result.results.channels[0].alternatives[0].words
   } else {
-    throw Error('transcription result is null')
+    throw new Error('transcription result is null')
   }
 }
 
-export async function generateAudio(text: string, voiceName: string, savePath: string) {
+export async function generateAudio(text: string, voiceName: string, savePath: string): Promise<void> {
   const data = {
     model_id: 'eleven_multilingual_v2',
     text: text
   }
 
   const voiceId = await getVoiceByName(voiceName)
+  if (!voiceId) {
+    throw new Error(`Voice "${voiceName}" not found`)
+  }
 
   const response = await axios.post(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, data, {
     headers: {
@@ -36,7 +43,7 @@ export async function generateAudio(text: string, voiceName: string, savePath: s
   fs.writeFileSync(savePath, response.data)
 }
 
-async function getVoiceByName(name: string) {
+async function getVoiceByName(name: string): Promise<string | null> {
   const response = await fetch('https://api.elevenlabs.io/v1/voices', {
     method: 'GET',
     headers: {
@@ -48,7 +55,7 @@ async function getVoiceByName(name: string) {
     throw new Error(`HTTP error! status: ${response.status}`)
   }
 
-  const data: any = await response.json()
-  const voice = data.voices.find((voice: { name: string; voice_id: string }) => voice.name === name)
+  const data: ElevenLabsVoicesResponse = await response.json()
+  const voice = data.voices.find((voice: ElevenLabsVoice) => voice.name === name)
   return voice ? voice.voice_id : null
 }

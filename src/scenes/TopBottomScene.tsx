@@ -1,12 +1,7 @@
 import { Img, Layout, makeScene2D, Rect, Txt, Video } from '@revideo/2d'
 import { all, createRef, createSignal, Reference, useScene, waitFor } from '@revideo/core'
 import '../utils/global.css'
-
-interface Word {
-  punctuated_word: string
-  start: number
-  end: number
-}
+import { Word } from '../utils/types'
 
 interface captionSettings {
   fontSize: number
@@ -93,7 +88,7 @@ const scene = makeScene2D('topBottomScene', function* (view) {
   )
 })
 
-function* displayTopImages(container: Reference<Layout>, images: string[], totalDuration: number) {
+function* displayTopImages(container: Reference<Layout>, images: string[], totalDuration: number): Generator<any, void, any> {
   if (images.length === 0) {
     console.log('No images to display')
     return
@@ -149,10 +144,10 @@ function* displayTopImages(container: Reference<Layout>, images: string[], total
   }
 }
 
-function* displayWords(container: Reference<Layout>, words: Word[], settings: captionSettings) {
+function* displayWords(container: Reference<Layout>, words: Word[], settings: captionSettings): Generator<any, void, any> {
   if (words.length === 0) {
     console.log('No words to display')
-    // Добавить заглушку текста для тестирования
+    // Add placeholder text for testing
     const testTextRef = createRef<Txt>()
     yield container().add(
       <Txt
@@ -168,7 +163,7 @@ function* displayWords(container: Reference<Layout>, words: Word[], settings: ca
         Test Caption Text
       </Txt>
     )
-    yield* waitFor(5) // Показать тест текст 5 секунд
+    yield* waitFor(5) // Show test text for 5 seconds
     return
   }
 
@@ -309,7 +304,7 @@ function* highlightCurrentWord(
   wordRefs: Reference<Txt>[],
   wordColor: string,
   backgroundColor: string
-) {
+): Generator<any, void, any> {
   let nextWordStart = 0
 
   for (let i = 0; i < currentBatch.length; i++) {
