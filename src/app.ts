@@ -91,7 +91,17 @@ app.post('/render/top-bottom-template', async (req, res) => {
       variables: renderVariables,
       settings: {
         outFile: `${jobId}.mp4` as `${string}.mp4`,
-        logProgress: true
+        logProgress: true,
+        puppeteer: {
+          executablePath: '/usr/bin/google-chrome-stable',
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--headless'
+          ]
+        }
       }
     })
 
