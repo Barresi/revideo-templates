@@ -1,7 +1,7 @@
 import { createClient } from '@deepgram/sdk'
 import axios from 'axios'
-import * as fs from 'fs'
 import { config } from 'dotenv'
+import * as fs from 'fs'
 import { DeepgramResponse, ElevenLabsVoice, ElevenLabsVoicesResponse, Word } from './types'
 
 config()
@@ -13,6 +13,8 @@ export async function getWordTimestamps(audioFilePath: string): Promise<Word[]> 
     model: 'nova-2',
     smart_format: true
   })) as { result: DeepgramResponse }
+
+  console.log(`deepgram request: ${result}`)
 
   if (result) {
     return result.results.channels[0].alternatives[0].words
