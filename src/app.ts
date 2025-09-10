@@ -75,6 +75,7 @@ app.post('/render/top-bottom-template', async (req, res) => {
     // Step 4: Generate captions using Deepgram
     console.log(`[${jobId}] Generating captions...`)
     const words = await getWordTimestamps(audioResult.audioPath)
+    console.log(`[${jobId}] Captions is: ${words}`)
 
     // Step 5: Render final video
     console.log(`[${jobId}] Rendering final video...`)
