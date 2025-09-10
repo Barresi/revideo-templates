@@ -88,20 +88,9 @@ app.post('/render/top-bottom-template', async (req, res) => {
     await renderVideo({
       projectFile: './src/templates/TopBottomTemplate.ts',
       variables: renderVariables,
-      settings: { 
-        outFile: `${jobId}.mp4` as `${string}.mp4`, 
-        logProgress: true,
-        puppeteer: {
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-          ]
-        }
+      settings: {
+        outFile: `${jobId}.mp4` as `${string}.mp4`,
+        logProgress: true
       }
     })
 
