@@ -6,7 +6,7 @@ import * as path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { extractAudioFromVideo, validateVideoFile } from './utils/audioExtractor'
 
-import { forceCleanup, scheduleCleanup } from './utils/cleanupService'
+import { scheduleCleanup } from './utils/cleanupService'
 import { downloadFiles } from './utils/fileDownloader'
 import { createJobDirectory, getJobDirectory } from './utils/jobDirectoryService'
 import { ITopBottomTemplateVariables, RenderRequest } from './utils/types'
@@ -67,7 +67,6 @@ app.post('/render/top-bottom-template', async (req, res) => {
     // Step 4: Generate captions using Deepgram
     console.log(`[${jobId}] Generating captions...`)
     const words = await getWordTimestamps(audioResult.audioPath)
-    console.log(`[${jobId}] Captions is `)
 
     // Step 5: Render final video
     console.log(`[${jobId}] Rendering final video...`)
@@ -82,7 +81,7 @@ app.post('/render/top-bottom-template', async (req, res) => {
       projectFile: './src/templates/TopBottomTemplate.ts',
       variables: renderVariables,
       settings: {
-        outFile: `${jobId}.mp4` as `${string}.mp4`,
+        outFile: `/${jobId}/output/${jobId}.mp4` as `${string}.mp4`,
         logProgress: true,
         puppeteer: {
           executablePath: '/usr/bin/google-chrome-stable',
@@ -113,7 +112,7 @@ app.post('/render/top-bottom-template', async (req, res) => {
 
     // Force immediate cleanup on error
     if (jobDir) {
-      forceCleanup(jobId)
+      //forceCleanup(jobId)
     }
 
     res.status(500).json({
