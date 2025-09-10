@@ -1,5 +1,5 @@
-import * as cron from 'node-cron'
 import * as fs from 'fs'
+import * as cron from 'node-cron'
 import * as path from 'path'
 
 export interface CleanupJob {
@@ -14,18 +14,18 @@ const activeCleanupJobs = new Map<string, CleanupJob>()
 export function scheduleCleanup(jobId: string, tempDir: string, delayMinutes: number = 10): void {
   const now = new Date()
   const cleanupAt = new Date(now.getTime() + delayMinutes * 60 * 1000)
-  
+
   const job: CleanupJob = {
     jobId,
     scheduledAt: now,
     cleanupAt,
     tempDir
   }
-  
+
   activeCleanupJobs.set(jobId, job)
-  
+
   console.log(`Scheduled cleanup for job ${jobId} at ${cleanupAt.toISOString()}`)
-  
+
   // Schedule the cleanup
   setTimeout(() => {
     cleanupTempDirectory(jobId)
@@ -34,12 +34,12 @@ export function scheduleCleanup(jobId: string, tempDir: string, delayMinutes: nu
 
 export function cleanupTempDirectory(jobId: string): void {
   const job = activeCleanupJobs.get(jobId)
-  
+
   if (!job) {
     console.warn(`Cleanup job ${jobId} not found`)
     return
   }
-  
+
   try {
     if (fs.existsSync(job.tempDir)) {
       deleteFolderRecursive(job.tempDir)
@@ -56,7 +56,7 @@ export function cleanupTempDirectory(jobId: string): void {
 
 export function forceCleanup(jobId: string): void {
   const job = activeCleanupJobs.get(jobId)
-  
+
   if (job) {
     cleanupTempDirectory(jobId)
   }
@@ -76,64 +76,34 @@ export function deleteFolderRecursive(folderPath: string): void {
   }
 }
 
-export function createTempDirectory(jobId: string): string {
-  const tempDir = path.join(process.cwd(), 'public', 'temp', jobId)
-  
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true })
-  }
-  
-  // Create subdirectories
-  const videosDir = path.join(tempDir, 'videos')
-  const audioDir = path.join(tempDir, 'audio')
-  const outputDir = path.join(tempDir, 'output')
-  
-  fs.mkdirSync(videosDir, { recursive: true })
-  fs.mkdirSync(audioDir, { recursive: true })
-  fs.mkdirSync(outputDir, { recursive: true })
-  
-  return tempDir
-}
-
-export function getTempDirectories(jobId: string) {
-  const tempDir = path.join(process.cwd(), 'public', 'temp', jobId)
-  
-  return {
-    root: tempDir,
-    videos: path.join(tempDir, 'videos'),
-    audio: path.join(tempDir, 'audio'),
-    output: path.join(tempDir, 'output')
-  }
-}
-
 // Start a cleanup cron job that runs every hour to clean up any missed directories
 export function startCleanupCron(): void {
   cron.schedule('0 * * * *', () => {
     console.log('Running hourly cleanup check...')
     cleanupOldTempDirectories()
   })
-  
+
   console.log('Cleanup cron job started (runs every hour)')
 }
 
 function cleanupOldTempDirectories(): void {
   const tempRootDir = path.join(process.cwd(), 'public', 'temp')
-  
+
   if (!fs.existsSync(tempRootDir)) {
     return
   }
-  
+
   const now = new Date()
   const maxAge = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
-  
+
   try {
     fs.readdirSync(tempRootDir).forEach((jobDir) => {
       const jobDirPath = path.join(tempRootDir, jobDir)
       const stats = fs.statSync(jobDirPath)
-      
+
       if (stats.isDirectory()) {
         const age = now.getTime() - stats.mtime.getTime()
-        
+
         if (age > maxAge) {
           console.log(`Cleaning up old temp directory: ${jobDirPath}`)
           deleteFolderRecursive(jobDirPath)

@@ -53,7 +53,7 @@ export async function downloadFile(url: string, destinationPath: string): Promis
     await streamPipeline(response.data, writeStream)
 
     const stats = fs.statSync(destinationPath)
-    
+
     return {
       filePath: destinationPath,
       originalUrl: url,
@@ -70,19 +70,24 @@ export async function downloadFile(url: string, destinationPath: string): Promis
 }
 
 export async function downloadFiles(urls: string[], destinationDir: string): Promise<DownloadResult[]> {
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(destinationDir)) {
+    fs.mkdirSync(destinationDir, { recursive: true })
+  }
+
   const results: DownloadResult[] = []
-  
+
   for (let index = 0; index < urls.length; index++) {
     const url = urls[index]
     let extension = getFileExtension(url)
     let filename = `file_${index}${extension}`
     let destinationPath = path.join(destinationDir, filename)
-    
+
     try {
       const result = await downloadFile(url, destinationPath)
-      
+
       // If we got a MIME type, try to determine correct extension
-      if (result.mimeType && extension === '.mp4') {
+      if (result.mimeType) {
         const correctExtension = getExtensionFromMimeType(result.mimeType)
         if (correctExtension !== extension) {
           // Rename file with correct extension
@@ -92,11 +97,11 @@ export async function downloadFiles(urls: string[], destinationDir: string): Pro
           result.filePath = newPath
         }
       }
-      
+
       results.push(result)
     } catch (error) {
       // Cleanup any successfully downloaded files on error
-      results.forEach(result => {
+      results.forEach((result) => {
         if (fs.existsSync(result.filePath)) {
           fs.unlinkSync(result.filePath)
         }
@@ -104,16 +109,18 @@ export async function downloadFiles(urls: string[], destinationDir: string): Pro
       throw error
     }
   }
-  
+
   return results
 }
 
 function isValidGoogleDriveUrl(url: string): boolean {
   try {
     const parsedUrl = new URL(url)
-    return parsedUrl.hostname === 'drive.usercontent.google.com' ||
-           parsedUrl.hostname === 'drive.google.com' ||
-           parsedUrl.hostname === 'docs.google.com'
+    return (
+      parsedUrl.hostname === 'drive.usercontent.google.com' ||
+      parsedUrl.hostname === 'drive.google.com' ||
+      parsedUrl.hostname === 'docs.google.com'
+    )
   } catch {
     return false
   }
@@ -128,7 +135,7 @@ function convertGoogleDriveUrl(url: string): string {
       return `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0`
     }
   }
-  
+
   // Return original URL if it's already in download format
   return url
 }
@@ -138,7 +145,7 @@ function getFileExtension(url: string): string {
     const parsedUrl = new URL(url)
     const pathname = parsedUrl.pathname
     const lastDot = pathname.lastIndexOf('.')
-    
+
     if (lastDot !== -1) {
       const ext = pathname.substring(lastDot)
       // Return extension if it looks like a valid file extension
@@ -146,13 +153,13 @@ function getFileExtension(url: string): string {
         return ext
       }
     }
-    
+
     // For Google Drive URLs, try to determine type from content-type later
     // For now, assume common formats
     if (url.includes('export=download') || url.includes('drive.usercontent.google.com')) {
       return '.mp4' // Default for video files
     }
-    
+
     return '.mp4' // Default assumption for video content
   } catch {
     return '.mp4'
@@ -172,6 +179,6 @@ function getExtensionFromMimeType(mimeType: string): string {
     'image/gif': '.gif',
     'image/webp': '.webp'
   }
-  
+
   return mimeToExt[mimeType.toLowerCase()] || '.mp4'
 }

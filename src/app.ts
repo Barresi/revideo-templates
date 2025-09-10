@@ -5,14 +5,10 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { extractAudioFromVideo, validateVideoFile } from './utils/audioExtractor'
-import {
-  createTempDirectory,
-  forceCleanup,
-  getTempDirectories,
-  scheduleCleanup,
-  startCleanupCron
-} from './utils/cleanupService'
+
+import { forceCleanup, scheduleCleanup } from './utils/cleanupService'
 import { downloadFiles } from './utils/fileDownloader'
+import { createJobDirectory, getJobDirectory } from './utils/jobDirectoryService'
 import { ITopBottomTemplateVariables, RenderRequest } from './utils/types'
 import { getWordTimestamps } from './utils/utils'
 
@@ -22,16 +18,13 @@ const PORT = parseInt(process.env.PORT) || 5000
 const app = express()
 app.use(express.json({ limit: '10mb' }))
 
-// Start cleanup cron job
-startCleanupCron()
-
 app.get('/', (req, res) => {
   res.status(200).send(`Hello World!`)
 })
 
 app.post('/render/top-bottom-template', async (req, res) => {
   const jobId = uuidv4()
-  let tempDir: string | null = null
+  let jobDir: string | null = null
 
   try {
     console.log(`Starting job ${jobId}`)
@@ -45,19 +38,18 @@ app.post('/render/top-bottom-template', async (req, res) => {
       return res.status(400).json({ error: 'ugcVideoUrl string is required' })
     }
 
-    // Create temp directory structure
-    console.log(`[${jobId}] Creating temporary directories...`)
-    tempDir = createTempDirectory(jobId)
-    const dirs = getTempDirectories(jobId)
+    // Create job directory structure
+    console.log(`[${jobId}] Creating job directories...`)
+    jobDir = createJobDirectory(jobId)
+    const dir = getJobDirectory(jobId)
 
-    // Step 1: Download all files (images + UGC video)
-    console.log(`[${jobId}] Downloading files...`)
-    const allUrls = [...variables.imageUrls, variables.ugcVideoUrl]
-    const downloadResults = await downloadFiles(allUrls, dirs.videos)
+    // Step 1: Download images and video
+    console.log(`[${jobId}] Downloading images...`)
+    const imageResults = await downloadFiles(variables.imageUrls, dir.images)
 
-    // Separate UGC video from images
-    const ugcVideoResult = downloadResults[downloadResults.length - 1] // Last downloaded file is UGC video
-    const imageResults = downloadResults.slice(0, -1) // All other files are images
+    console.log(`[${jobId}] Downloading UGC video...`)
+    const videoResults = await downloadFiles([variables.ugcVideoUrl], dir.videos)
+    const ugcVideoResult = videoResults[0]
 
     console.log(`[${jobId}] Downloaded ${imageResults.length} images and 1 UGC video`)
 
@@ -70,22 +62,22 @@ app.post('/render/top-bottom-template', async (req, res) => {
 
     // Step 3: Extract audio from UGC video
     console.log(`[${jobId}] Extracting audio from UGC video...`)
-    const audioResult = await extractAudioFromVideo(ugcVideoResult.filePath, dirs.audio)
+    const audioResult = await extractAudioFromVideo(ugcVideoResult.filePath, dir.audio)
 
     // Step 4: Generate captions using Deepgram
     console.log(`[${jobId}] Generating captions...`)
     const words = await getWordTimestamps(audioResult.audioPath)
-    console.log(`[${jobId}] Captions is: ${words}`)
+    console.log(`[${jobId}] Captions is `)
 
     // Step 5: Render final video
     console.log(`[${jobId}] Rendering final video...`)
     const renderVariables: ITopBottomTemplateVariables = {
-      ugcVideoUrl: ugcVideoResult.filePath,
-      imageUrls: imageResults.map((result) => result.filePath),
+      ugcVideoUrl: `/videos/${path.basename(ugcVideoResult.filePath)}`,
+      imageUrls: imageResults.map((result) => `/images/${path.basename(result.filePath)}`),
       words: words
     }
 
-    const outputFilePath = path.join(dirs.output, `${jobId}.mp4`)
+    const outputFilePath = path.join(dir.output, `${jobId}.mp4`)
     await renderVideo({
       projectFile: './src/templates/TopBottomTemplate.ts',
       variables: renderVariables,
@@ -108,7 +100,7 @@ app.post('/render/top-bottom-template', async (req, res) => {
     console.log(`[${jobId}] Video rendered successfully`)
 
     // Step 6: Schedule cleanup (10 minutes from now)
-    scheduleCleanup(jobId, tempDir, 10)
+    scheduleCleanup(jobId, jobDir, 10)
 
     // Step 7: Send response
     if (fs.existsSync(outputFilePath)) {
@@ -120,7 +112,7 @@ app.post('/render/top-bottom-template', async (req, res) => {
     console.error(`[${jobId}] Error:`, error.message)
 
     // Force immediate cleanup on error
-    if (tempDir) {
+    if (jobDir) {
       forceCleanup(jobId)
     }
 
