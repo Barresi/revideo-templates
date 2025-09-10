@@ -14,9 +14,9 @@ export async function getWordTimestamps(audioFilePath: string): Promise<Word[]> 
     smart_format: true
   })) as { result: DeepgramResponse }
 
-  console.log(`deepgram request: ${result}`)
+  console.log(`deepgram words: ${result.results.channels[0].alternatives[0].words}`)
 
-  if (result) {
+  if (result.results.channels[0].alternatives[0].words) {
     return result.results.channels[0].alternatives[0].words
   } else {
     throw new Error('transcription result is null')
