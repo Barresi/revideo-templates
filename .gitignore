@@ -5,3 +5,4 @@ metadata.json
 .env
 output
 dist
+credentials.json
