@@ -44,7 +44,6 @@ const scene = makeScene2D('topBottomScene', function* (view) {
   const images = useScene().variables.get('imageUrls', [])()
   const ugcVideoUrl = useScene().variables.get('ugcVideoUrl', '')()
   const words = useScene().variables.get('words', [])()
-  const duration = words[words.length - 1].end + 0.5
 
   console.log('Images count:', images.length)
   console.log('Words count:', words.length)
@@ -67,17 +66,26 @@ const scene = makeScene2D('topBottomScene', function* (view) {
     </>
   )
 
+  // Get video duration first to determine scene duration
+  const videoRef = createRef<Video>()
+  yield bottomVideoContainer().add(<Video src={ugcVideoUrl} play={false} ref={videoRef} />)
+  yield
+  const videoDuration = videoRef().getDuration()
+  console.log('Video duration:', videoDuration)
+
+  // Use video duration as scene duration
+  const duration = videoDuration
+
   yield* all(
-    displayUgcVideo(bottomVideoContainer, ugcVideoUrl),
+    displayUgcVideo(bottomVideoContainer, ugcVideoUrl, videoRef),
     displayTopImages(topImagesContainer, images, duration),
-    displayWords(middleCaptionsContainer, words, textSettings)
+    displayWords(middleCaptionsContainer, words, textSettings, duration)
   )
 })
 
-function* displayUgcVideo(container: Reference<Layout>, url: string) {
-  // Add UGC video to bottom container - let it maintain aspect ratio
-  const videoRef = createRef<Video>()
-  yield container().add(<Video src={url} play={true} ref={videoRef} />)
+function* displayUgcVideo(container: Reference<Layout>, url: string, videoRef: Reference<Video>) {
+  // Start playing the video
+  videoRef().play()
 
   // Try to scale video to fill container width while maintaining aspect ratio
   videoRef().width(1080)
@@ -89,6 +97,9 @@ function* displayUgcVideo(container: Reference<Layout>, url: string) {
     const scaleNeeded = 960 / videoHeight
     videoRef().scale(scaleNeeded)
   }
+
+  // Play video for its full duration
+  yield* waitFor(videoRef().getDuration())
 }
 
 function* displayTopImages(
@@ -154,7 +165,8 @@ function* displayTopImages(
 function* displayWords(
   container: Reference<Layout>,
   words: Word[],
-  settings: captionSettings
+  settings: captionSettings,
+  duration?: number
 ): Generator<any, void, any> {
   if (words.length === 0) {
     console.log('No words to display')
@@ -174,7 +186,7 @@ function* displayWords(
         Test Caption Text
       </Txt>
     )
-    yield* waitFor(5) // Show test text for 5 seconds
+    yield* waitFor(duration || 5) // Show test text for video duration or 5 seconds
     return
   }
 
