@@ -1,19 +1,18 @@
-import { authenticate } from '@google-cloud/local-auth'
 import { config } from 'dotenv'
 import * as fs from 'fs'
 import { google } from 'googleapis'
 
 config()
 const SCOPES = ['https://www.googleapis.com/auth/drive']
-const CREDENTIALS_PATH = process.env.GOOGLE_DRIVE_KEY_PATH
+const CREDENTIALS_PATH = process.env.GOOGLE_DRIVE_KEY_PATH || './service-account-key.json'
 
 let driveInstance: any = null
 
 async function getDriveInstance() {
   if (!driveInstance) {
-    const auth = await authenticate({
-      scopes: SCOPES,
-      keyfilePath: CREDENTIALS_PATH
+    const auth = new google.auth.GoogleAuth({
+      keyFile: CREDENTIALS_PATH,
+      scopes: SCOPES
     })
     driveInstance = google.drive({ version: 'v3', auth })
   }
