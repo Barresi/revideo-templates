@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "start": "revideo editor --projectFile ./src/project.ts",
+    "start": "revideo editor --projectFile ./src/templates/TopBottomTemplate.ts",
     "render": "tsc && node dist/render.js",
     "dev": "tsc && node dist/app.js",
     "build": "tsc"

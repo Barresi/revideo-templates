@@ -67,9 +67,17 @@ const scene = makeScene2D('topBottomScene', function* (view) {
     </>
   )
 
+  yield* all(
+    displayUgcVideo(bottomVideoContainer, ugcVideoUrl),
+    displayTopImages(topImagesContainer, images, duration),
+    displayWords(middleCaptionsContainer, words, textSettings)
+  )
+})
+
+function* displayUgcVideo(container: Reference<Layout>, url: string) {
   // Add UGC video to bottom container - let it maintain aspect ratio
   const videoRef = createRef<Video>()
-  yield bottomVideoContainer().add(<Video src={ugcVideoUrl} play={true} ref={videoRef} />)
+  yield container().add(<Video src={url} play={true} ref={videoRef} />)
 
   // Try to scale video to fill container width while maintaining aspect ratio
   videoRef().width(1080)
@@ -81,14 +89,13 @@ const scene = makeScene2D('topBottomScene', function* (view) {
     const scaleNeeded = 960 / videoHeight
     videoRef().scale(scaleNeeded)
   }
+}
 
-  yield* all(
-    displayTopImages(topImagesContainer, images, duration),
-    displayWords(middleCaptionsContainer, words, textSettings)
-  )
-})
-
-function* displayTopImages(container: Reference<Layout>, images: string[], totalDuration: number): Generator<any, void, any> {
+function* displayTopImages(
+  container: Reference<Layout>,
+  images: string[],
+  totalDuration: number
+): Generator<any, void, any> {
   if (images.length === 0) {
     console.log('No images to display')
     return
@@ -144,7 +151,11 @@ function* displayTopImages(container: Reference<Layout>, images: string[], total
   }
 }
 
-function* displayWords(container: Reference<Layout>, words: Word[], settings: captionSettings): Generator<any, void, any> {
+function* displayWords(
+  container: Reference<Layout>,
+  words: Word[],
+  settings: captionSettings
+): Generator<any, void, any> {
   if (words.length === 0) {
     console.log('No words to display')
     // Add placeholder text for testing
